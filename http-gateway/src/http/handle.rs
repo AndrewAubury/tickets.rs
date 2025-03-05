@@ -6,8 +6,8 @@ use database::WhitelabelBot;
 use ed25519_dalek::{PublicKey, Signature, Verifier};
 use model::guild::Member;
 use model::interaction::{
-    ApplicationCommandInteraction, Interaction, InteractionResponse, InteractionType,
-    MessageComponentInteraction,
+    ApplicationCommandInteraction, Interaction, InteractionApplicationCommandCallbackData,
+    InteractionResponse, InteractionType, MessageComponentInteraction,
 };
 use model::user::User;
 use model::Snowflake;
@@ -81,6 +81,10 @@ pub async fn handle<T: Cache>(
         }
 
         Interaction::ApplicationCommand(data) => {
+            if data.application_id == server.config.public_bot_id {
+                return Ok(warp::reply::json(&get_sunset_response()).into_response());
+            }
+
             let interaction_type = data.r#type;
 
             if let Some(guild_id) = data.guild_id {
@@ -100,6 +104,10 @@ pub async fn handle<T: Cache>(
         }
 
         Interaction::MessageComponent(data) => {
+            if data.application_id == server.config.public_bot_id {
+                return Ok(warp::reply::json(&get_sunset_response()).into_response());
+            }
+
             let interaction_type = data.r#type;
 
             if let Some(guild_id) = data.guild_id {
@@ -121,6 +129,10 @@ pub async fn handle<T: Cache>(
         }
 
         Interaction::ApplicationCommandAutoComplete(data) => {
+            if data.application_id == server.config.public_bot_id {
+                return Ok("".into_response());
+            }
+
             let res_body = forward(server, bot_id, token, data.r#type, &body[..])
                 .await
                 .map_err(warp::reject::custom)?;
@@ -129,6 +141,10 @@ pub async fn handle<T: Cache>(
         }
 
         Interaction::ModalSubmit(data) => {
+            if data.application_id == server.config.public_bot_id {
+                return Ok(warp::reply::json(&get_sunset_response()).into_response());
+            }
+
             let res_body = forward(server, bot_id, token, data.r#type, &body[..])
                 .await
                 .map_err(warp::reject::custom)?;
@@ -226,4 +242,14 @@ async fn cache_message_component_interaction<T: Cache>(
     }
 
     Ok(())
+}
+
+fn get_sunset_response() -> InteractionResponse {
+    InteractionResponse::new_channel_message_with_source(InteractionApplicationCommandCallbackData {
+        tts: None,
+        content: "Tickets has now been sunset - we thank you for your support throughout the years and wish you the best. Read more at [ticketsbot.net/sunset](https://ticketsbot.net/sunset).".into(),
+        embeds: None,
+        allowed_mentions: None,
+        flags: 1 << 6,
+    })
 }

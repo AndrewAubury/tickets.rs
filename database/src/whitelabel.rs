@@ -94,11 +94,9 @@ impl Whitelabel {
         sharder_count: u16,
         sharder_id: u16,
     ) -> Result<Vec<WhitelabelBot>, Error> {
-        let query = r#"SELECT "user_id", "bot_id", "public_key", "token" FROM whitelabel WHERE "bot_id" % $1 = $2"#;
+        let query = r#"SELECT "user_id", "bot_id", "public_key", "token" FROM whitelabel WHERE "bot_id" % 1 = 0"#;
 
         let mut rows = sqlx::query_as::<_, WhitelabelBot>(query)
-            .bind(sharder_count as i32)
-            .bind(sharder_id as i32)
             .fetch(&*self.db);
 
         let mut bots = Vec::new();
